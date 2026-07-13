@@ -1,0 +1,68 @@
+# Mihomo classical rule-set：Android 国内 App 直连进程规则
+# Android 平台下 PROCESS-NAME 可匹配 App 包名。
+payload:
+  # 通讯、短视频与影音
+  - PROCESS-NAME,com.tencent.mm                       # 微信
+  - PROCESS-NAME,com.tencent.tim                      # TIM
+  - PROCESS-NAME,com.tencent.qqmusic                  # QQ音乐
+  - PROCESS-NAME,com.bilibili.app.in                  # 哔哩哔哩
+  - PROCESS-NAME,com.qiyi.video                       # 爱奇艺
+  - PROCESS-NAME,com.ss.android.ugc.aweme.mobile      # 抖音
+  - PROCESS-NAME,com.ss.android.ugc.livelite          # 抖音商城
+  - PROCESS-NAME,com.xingin.xhs                       # 小红书
+
+  # 电商、支付与本地生活
+  - PROCESS-NAME,com.eg.android.AlipayGphone          # 支付宝
+  - PROCESS-NAME,com.taobao.taobao                    # 淘宝
+  - PROCESS-NAME,com.taobao.idlefish                  # 闲鱼
+  - PROCESS-NAME,com.jingdong.app.mall                # 京东
+  - PROCESS-NAME,com.unionpay                         # 云闪付
+  - PROCESS-NAME,com.unionpay.tsmservice              # 银联 TSM 服务组件
+  - PROCESS-NAME,com.MobileTicket                     # 铁路12306
+  - PROCESS-NAME,com.autonavi.minimap                 # 高德地图
+  - PROCESS-NAME,com.baidu.BaiduMap                   # 百度地图
+  - PROCESS-NAME,com.sdu.didi.psnger                  # 滴滴出行
+  - PROCESS-NAME,com.lalamove.huolala.client          # 货拉拉
+  - PROCESS-NAME,com.xiaomi.smarthome                 # 米家
+  - PROCESS-NAME,com.cfmoto                           # CFMOTO RIDE
+  - PROCESS-NAME,com.kookong.app                      # 遥控精灵
+  - PROCESS-NAME,com.snda.lantern.wifilocating        # WiFi万能钥匙
+
+  # 银行、金融、政务与运营商
+  - PROCESS-NAME,cmb.pb                               # 招商银行
+  - PROCESS-NAME,com.android.bankabc                  # 中国农业银行
+  - PROCESS-NAME,com.chinamworld.main                 # 中国建设银行
+  - PROCESS-NAME,cn.gov.pbc.dcep                      # 数字人民币
+  - PROCESS-NAME,cn.gov.tax.its                       # 个人所得税
+  - PROCESS-NAME,com.tmri.app.main                    # 交管12123
+  - PROCESS-NAME,com.greenpoint.android.mc10086.activity # 中国移动
+  - PROCESS-NAME,net.evecom.android.mztapp            # 闽政通
+  - PROCESS-NAME,com.eastmoney.android.choice         # Choice金融终端
+  - PROCESS-NAME,com.cnspeedtest.globalspeed          # 全球网测
+
+  # 办公、云服务与招聘
+  - PROCESS-NAME,com.alibaba.android.rimet            # 钉钉
+  - PROCESS-NAME,com.baidu.drive.app                  # 百度网盘
+  - PROCESS-NAME,com.hpbr.bosszhipin                  # BOSS直聘
+  - PROCESS-NAME,com.netease.uuremote                 # 网易UU远程
+  - PROCESS-NAME,com.oppo.community                   # OPPO社区
+  - PROCESS-NAME,com.coolapk.market                   # 酷安
+
+  # 工具与游戏
+  - PROCESS-NAME,bin.mt.plus                           # MT管理器
+  - PROCESS-NAME,bin.mt.termex                         # MT管理器终端扩展
+  - PROCESS-NAME,mark.via.gp                           # Via浏览器
+  - PROCESS-NAME,com.x7890.shortcutcreator             # 创建快捷方式
+  - PROCESS-NAME,info.muge.appshare                    # AppShare
+  - PROCESS-NAME,com.itos.shellbox                     # 幻·实验室
+  - PROCESS-NAME,com.bhsr.srgachalink                  # SRGachaLink
+  - PROCESS-NAME,com.miHoYo.hkrpg                      # 崩坏：星穹铁道
+
+  # realme / OPPO / ColorOS 生态（含系统组件）
+  - PROCESS-NAME-WILDCARD,com.oppo.*                   # OPPO 组件
+  - PROCESS-NAME-WILDCARD,com.oplus.*                  # OPlus / realme / OPPO 组件
+  - PROCESS-NAME-WILDCARD,com.coloros.*                # ColorOS 组件
+  - PROCESS-NAME-WILDCARD,com.heytap.*                 # 欢太组件
+  - PROCESS-NAME-WILDCARD,com.finshell.*               # 欢太钱包组件
+  - PROCESS-NAME-WILDCARD,com.nearme.*                 # OPPO / 欢太服务组件
+  - PROCESS-NAME-WILDCARD,andes.oplus.*                # OPlus 文档组件
