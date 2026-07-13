@@ -1,7 +1,7 @@
-# Mihomo classical rule-set：Android 国内 App 直连进程规则
-# Android 平台下 PROCESS-NAME 可匹配 App 包名。
+# Mihomo classical rule-set: Android domestic apps that should connect directly.
+# PROCESS-NAME matches Android package names when used by an Android Mihomo client.
 payload:
-  # 通讯、短视频与影音
+  # Communications, short video and media
   - PROCESS-NAME,com.tencent.mm                       # 微信
   - PROCESS-NAME,com.tencent.tim                      # TIM
   - PROCESS-NAME,com.tencent.qqmusic                  # QQ音乐
@@ -11,7 +11,7 @@ payload:
   - PROCESS-NAME,com.ss.android.ugc.livelite          # 抖音商城
   - PROCESS-NAME,com.xingin.xhs                       # 小红书
 
-  # 电商、支付与本地生活
+  # E-commerce, payments and local services
   - PROCESS-NAME,com.eg.android.AlipayGphone          # 支付宝
   - PROCESS-NAME,com.taobao.taobao                    # 淘宝
   - PROCESS-NAME,com.taobao.idlefish                  # 闲鱼
@@ -28,7 +28,7 @@ payload:
   - PROCESS-NAME,com.kookong.app                      # 遥控精灵
   - PROCESS-NAME,com.snda.lantern.wifilocating        # WiFi万能钥匙
 
-  # 银行、金融、政务与运营商
+  # Banking, finance, government and carriers
   - PROCESS-NAME,cmb.pb                               # 招商银行
   - PROCESS-NAME,com.android.bankabc                  # 中国农业银行
   - PROCESS-NAME,com.chinamworld.main                 # 中国建设银行
@@ -40,7 +40,7 @@ payload:
   - PROCESS-NAME,com.eastmoney.android.choice         # Choice金融终端
   - PROCESS-NAME,com.cnspeedtest.globalspeed          # 全球网测
 
-  # 办公、云服务与招聘
+  # Work, cloud services and recruitment
   - PROCESS-NAME,com.alibaba.android.rimet            # 钉钉
   - PROCESS-NAME,com.baidu.drive.app                  # 百度网盘
   - PROCESS-NAME,com.hpbr.bosszhipin                  # BOSS直聘
@@ -48,17 +48,15 @@ payload:
   - PROCESS-NAME,com.oppo.community                   # OPPO社区
   - PROCESS-NAME,com.coolapk.market                   # 酷安
 
-  # 工具与游戏
+  # Utilities and games
   - PROCESS-NAME,bin.mt.plus                           # MT管理器
   - PROCESS-NAME,bin.mt.termex                         # MT管理器终端扩展
   - PROCESS-NAME,mark.via.gp                           # Via浏览器
   - PROCESS-NAME,com.x7890.shortcutcreator             # 创建快捷方式
   - PROCESS-NAME,info.muge.appshare                    # AppShare
-  - PROCESS-NAME,com.itos.shellbox                     # 幻·实验室
-  - PROCESS-NAME,com.bhsr.srgachalink                  # SRGachaLink
   - PROCESS-NAME,com.miHoYo.hkrpg                      # 崩坏：星穹铁道
 
-  # realme / OPPO / ColorOS 生态（含系统组件）
+  # realme / OPPO / ColorOS ecosystem, including system components
   - PROCESS-NAME-WILDCARD,com.oppo.*                   # OPPO 组件
   - PROCESS-NAME-WILDCARD,com.oplus.*                  # OPlus / realme / OPPO 组件
   - PROCESS-NAME-WILDCARD,com.coloros.*                # ColorOS 组件

@@ -1,6 +1,6 @@
 # android-cn-apps
 
-Mihomo classical rule-set，用 Android App 包名匹配国内应用并直连。当前包含 54 条规则，按通讯影音、电商生活、银行政务、办公服务、工具游戏和 realme/OPPO/ColorOS 生态分类。
+Mihomo classical rule-set，用 Android App 包名匹配国内应用并直连。当前包含 52 条规则，按通讯影音、电商生活、银行政务、办公服务、工具游戏和 realme/OPPO/ColorOS 生态分类。
 
 ## 使用
 
