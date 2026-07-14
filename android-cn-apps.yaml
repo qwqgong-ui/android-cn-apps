@@ -51,7 +51,6 @@ payload:
   # Utilities and games
   - PROCESS-NAME,bin.mt.plus                           # MT管理器
   - PROCESS-NAME,bin.mt.termex                         # MT管理器终端扩展
-  - PROCESS-NAME,mark.via.gp                           # Via浏览器
   - PROCESS-NAME,com.x7890.shortcutcreator             # 创建快捷方式
   - PROCESS-NAME,info.muge.appshare                    # AppShare
   - PROCESS-NAME,com.miHoYo.hkrpg                      # 崩坏：星穹铁道
