@@ -37,6 +37,27 @@ rules:
 - RULE-SET,android-cn-apps,🟢
 ```
 
+## 自定义拦截规则
+
+仓库同时提供已编译的 Mihomo MRS 规则集：
+
+```yaml
+rule-providers:
+  custom-reject:
+    type: http
+    behavior: domain
+    format: mrs
+    url: https://raw.githubusercontent.com/qwqgong-ui/android-cn-apps/refs/heads/main/reject.mrs
+    path: ruleset/reject.mrs
+    interval: 86400
+
+rules:
+  - RULE-SET,custom-reject,REJECT
+```
+
+可编辑的源文件为 `reject.yaml`；`reject.mrs` 由 Mihomo 的
+`convert-ruleset domain yaml reject.yaml reject.mrs` 命令编译生成。
+
 ## 限制
 
 - `PROCESS-NAME` 在 Android 平台可匹配 App 包名；Windows 上运行的 Mihomo 只能匹配 Windows 本机进程。
