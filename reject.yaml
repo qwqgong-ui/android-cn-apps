@@ -1,0 +1,16 @@
+# Mihomo domain rule-set: custom domains to reject.
+payload:
+  - cloudconf-kit-cn.heytapmobi.com
+  - cm.bilibili.com
+  - graph.facebook.com
+  - mdp-usertrace-cn.heytapdownload.com
+  - push-ads-cn.heytapmobi.com
+  - +.adobe.io
+  - +.adobestats.io
+  - +.birdgesdk.com
+  - +.edge.mountaintoys.cn
+  - +.mcdn.bilivideo.cn
+  - o1383653.ingest.sentry.io
+  - stun*.chat.bilibili.com
+  - adcdn*.tencentmusic.com
+  - ads-i*.xhscdn.com
