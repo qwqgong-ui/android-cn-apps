@@ -14,3 +14,42 @@ payload:
   - stun*.chat.bilibili.com
   - adcdn*.tencentmusic.com
   - ads-i*.xhscdn.com
+  # HTTPDNS domains merged from:
+  # - https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/BlockHttpDNS/BlockHttpDNS_No_Resolve.yaml
+  # - https://raw.githubusercontent.com/VirgilClyne/GetSomeFries/main/ruleset/HTTPDNS.Block.list
+  - dns.jd.com
+  - dns.weibo.cn
+  - dns.weixin.qq.com
+  - dns.weixin.qq.com.cn
+  - httpdns-api.aliyuncs.com
+  - httpdns-sc.aliyuncs.com
+  - httpdns.alicdn.com
+  - httpdns.bilivideo.com
+  - httpdns.c.cdnhwc2.com
+  - httpdns.calorietech.com
+  - httpdns.meituan.com
+  - httpdns.music.163.com
+  - httpdns.n.netease.com
+  - httpdns.push.oppomobile.com
+  - httpdns.volcengineapi.com
+  - httpdns.yunxindns.com
+  - lofter.httpdns.c.163.com
+  - music.httpdns.c.163.com
+  - +.httpdns.baidu.com
+  - +.httpdns.baidubce.com
+  - +.httpdns.pro
+  - +.httpsdns.baidu.com
+  - resolvers-cn.httpdns.aliyuncs.com
+  - httpdns.bcelive.com
+  - doh.iqiyi.com
+  - httpdns.kg.qq.com
+  - httpdnsmultiapi.meituan.com
+  - httpdnsmultiapivip.meituan.com
+  - dnspod.meituan.httpdns.qcloud.com
+  - dnspod.meituan.httpdns.start.qcloud.com
+  - httpdns.immomo.com
+  - httpdns.yunxinfw.com
+  - httpdns-sdk.n.netease.com
+  - httpdns.ocloud.oppomobile.com
+  - aedns.weixin.qq.com
+  - yuyin-httpdns.gslb.yy.com
