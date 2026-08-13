@@ -37,43 +37,59 @@ rules:
 - RULE-SET,android-cn-apps,🟢
 ```
 
-## 自定义拦截规则
+## 统一域名拦截规则
 
-仓库同时提供已编译的 Mihomo MRS 规则集：
+仓库每天聚合 4 个外部 domain MRS 和本仓库 `reject.yaml`，经解包、
+小写化、精确去重和保守的后缀包含裁剪后，重新编译为单一 domain MRS：
+
+- MetaCubeX `category-ads-all`
+- MetaCubeX `category-httpdns-cn`
+- wwqgtxx `reject`
+- 217heidai `adblockmihomolite`
+- 本仓库 `reject.yaml` (`custom-reject`)
+
+`reject-ip.mrs` / `custom-reject-ip` 仍是独立的 ipcidr 规则集，不参与聚合。
 
 ```yaml
 rule-providers:
-  custom-reject:
+  reject-all:
     type: http
     behavior: domain
     format: mrs
-    url: https://raw.githubusercontent.com/qwqgong-ui/android-cn-apps/refs/heads/main/reject.mrs
-    path: ruleset/reject.mrs
     interval: 86400
+    proxy: 🌐
+    url: https://raw.githubusercontent.com/qwqgong-ui/android-cn-apps/refs/heads/main/reject-all.mrs
+    path: ruleset/reject-all.mrs
   custom-reject-ip:
     type: http
     behavior: ipcidr
     format: mrs
-    url: https://raw.githubusercontent.com/qwqgong-ui/android-cn-apps/refs/heads/main/reject-ip.mrs
-    path: ruleset/reject-ip.mrs
     interval: 86400
+    proxy: 🌐
+    url: https://raw.githubusercontent.com/qwqgong-ui/android-cn-apps/refs/heads/main/reject-ip.mrs
+    path: ruleset/custom-reject-ip.mrs
 
 rules:
-  - RULE-SET,custom-reject,REJECT
-  - RULE-SET,custom-reject-ip,REJECT,no-resolve
+  - RULE-SET,reject-all,🛑
+  - RULE-SET,custom-reject-ip,🛑,no-resolve
 ```
 
-`reject.yaml` 包含域名规则，HTTPDNS 域名已从
+`reject.mrs` 继续只代表本仓库的 custom-reject，便于兼容旧配置；
+`reject-all.mrs` 是新的统一路由拦截产物。`reject.yaml` 包含自定义域名规则，
+HTTPDNS 域名已从
 `BlockHttpDNS_No_Resolve.yaml` 和 `HTTPDNS.Block.list` 合并并去重。
 两份上游中的 `IP-CIDR`/`IP-CIDR6` 因无法存入 domain MRS，统一放在
 `reject-ip.yaml`。
 
-MRS 文件由 Mihomo 编译生成：
+手动构建需要 `mihomo`、Python 3 和 `curl`：
 
 ```shell
-mihomo convert-ruleset domain yaml reject.yaml reject.mrs
-mihomo convert-ruleset ipcidr yaml reject-ip.yaml reject-ip.mrs
+./scripts/build-reject-all.sh
 ```
+
+GitHub Actions 每天 UTC 18:00（UTC+8 02:00）运行，也支持手动触发；
+`reject.yaml` 或构建脚本修改时也会构建。工作流会校验 MRS behavior、
+规则数、往返 dump、IP/CIDR 混入和 custom-reject 覆盖，并且仅在产物变化时提交。
 
 ## 限制
 

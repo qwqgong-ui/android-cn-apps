@@ -1,0 +1,105 @@
+name: Build unified reject rules
+
+on:
+  schedule:
+    - cron: "0 18 * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - reject.yaml
+      - scripts/build-reject-all.sh
+      - scripts/normalize-domain-rules.py
+      - scripts/validate-domain-coverage.py
+      - .github/workflows/build-rules.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-unified-reject-rules
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MIHOMO_VERSION: v1.19.29
+      MIHOMO_SHA256: 5612e698e96c8b8ad15abc4c0a4f098eba9234354b4f248cb97f2528e215b094
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Download Mihomo CLI
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          asset="mihomo-linux-amd64-compatible-${MIHOMO_VERSION}.gz"
+          curl --fail --location --silent --show-error \
+            --retry 4 --retry-all-errors \
+            "https://github.com/MetaCubeX/mihomo/releases/download/${MIHOMO_VERSION}/${asset}" \
+            --output "$RUNNER_TEMP/mihomo.gz"
+          echo "$MIHOMO_SHA256  $RUNNER_TEMP/mihomo.gz" | sha256sum --check --strict
+          gzip --decompress --stdout "$RUNNER_TEMP/mihomo.gz" > "$RUNNER_TEMP/mihomo"
+          chmod +x "$RUNNER_TEMP/mihomo"
+          "$RUNNER_TEMP/mihomo" -v
+
+      - name: Build and validate reject-all.mrs
+        id: rules
+        env:
+          MIHOMO_BIN: ${{ runner.temp }}/mihomo
+        run: STATS_FILE="$GITHUB_OUTPUT" ./scripts/build-reject-all.sh
+
+      - name: Write build summary
+        env:
+          ADS: ${{ steps.rules.outputs.category_ads_all_count }}
+          HTTPDNS: ${{ steps.rules.outputs.category_httpdns_cn_count }}
+          REJECT: ${{ steps.rules.outputs.reject_count }}
+          ADBLOCK: ${{ steps.rules.outputs.adblockmihomolite_count }}
+          CUSTOM: ${{ steps.rules.outputs.custom_reject_count }}
+          BEFORE: ${{ steps.rules.outputs.merged_before }}
+          UNIQUE: ${{ steps.rules.outputs.exact_unique }}
+          DEDUP_RATE: ${{ steps.rules.outputs.dedup_rate }}
+          PRUNED: ${{ steps.rules.outputs.pruned }}
+          FINAL_COUNT: ${{ steps.rules.outputs.final_count }}
+          INPUT_BYTES: ${{ steps.rules.outputs.input_mrs_bytes }}
+          FINAL_BYTES: ${{ steps.rules.outputs.final_bytes }}
+          SAVINGS: ${{ steps.rules.outputs.savings_rate }}
+        run: |
+          {
+            echo '## Unified reject rules'
+            echo
+            echo '| Metric | Value |'
+            echo '|---|---:|'
+            echo "| category-ads-all rules | $ADS |"
+            echo "| category-httpdns-cn rules | $HTTPDNS |"
+            echo "| wwqgtxx reject rules | $REJECT |"
+            echo "| adblockmihomolite rules | $ADBLOCK |"
+            echo "| custom-reject accepted rules | $CUSTOM |"
+            echo "| Rules before deduplication | $BEFORE |"
+            echo "| Rules after exact deduplication | $UNIQUE |"
+            echo "| Exact deduplication rate | $DEDUP_RATE% |"
+            echo "| Safely covered rules pruned | $PRUNED |"
+            echo "| Final rules | $FINAL_COUNT |"
+            echo "| Input MRS bytes | $INPUT_BYTES |"
+            echo "| reject-all.mrs bytes | $FINAL_BYTES |"
+            echo "| MRS byte savings | $SAVINGS% |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit changed artifacts
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          git diff --check
+          git add reject.mrs reject-all.mrs
+          if git diff --cached --quiet; then
+            echo 'Rule artifacts are unchanged.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'update unified reject rules'
+          git push
