@@ -42,20 +42,26 @@ rules:
 仓库每天聚合 4 个外部规则源和本仓库 `reject.yaml`，经解析、
 小写化、精确去重和保守的后缀包含裁剪后，编译为单一 domain MRS：
 
-- MetaCubeX `category-ads-all` (`.list`)
-- MetaCubeX `category-httpdns-cn` (`.list`)
+- v2fly domain-list-community `category-ads-all`
+- v2fly domain-list-community `category-httpdns-cn`
 - wwqgtxx `reject` (`.list`)
 - 217heidai `adblockmihomolite` (`.yaml`)
 - 本仓库 `reject.yaml` (`custom-reject`)
 
-四个外部源都拉取上游发布的规则文本，而不是它们同时发布的 `.mrs`。
-`.mrs` 是上游用自己那一版 Mihomo 编译出来的二进制产物，直接解包会把合并
-结果的语义绑定在别人的工具链上；改从文本拉取后，全部规则都由本仓库锁定的
-Mihomo 版本编译。所有规则源（含 `reject.yaml`）还会先经过严格校验：
+两个 geosite 列表直接解析 [v2fly/domain-list-community][dlc] 的 `data/`
+源数据（按其 `main.go` 的语义还原 `include:`、属性过滤和冗余子域裁剪），
+而不是 MetaCubeX `meta-rules-dat` 的 `geo/geosite` 产物——后者本身就是这份
+数据的下游渲染。另外两个源拉取上游发布的规则文本，而不是它们同时发布的
+`.mrs`：`.mrs` 是上游用自己那一版 Mihomo 编译出来的二进制产物，直接解包会
+把合并结果的语义绑定在别人的工具链上。改从源头拉取后，全部规则都由本仓库
+锁定的 Mihomo 版本编译。
+
+所有规则源（含 `reject.yaml`）都会先经过严格校验：
 `mihomo convert-ruleset domain text` 对任何一行都照单全收，若上游改用
-classical 规则（`DOMAIN-SUFFIX,example.com`）、Geosite 属性
-（`keyword:`、`regexp:`）或 IP 字面量，这些无法匹配的条目会被静默写进
-MRS；现在它们会直接让构建失败。
+classical 规则（`DOMAIN-SUFFIX,example.com`）、Geosite 属性或 IP 字面量，
+这些无法匹配的条目会被静默写进 MRS；现在它们会直接让构建失败。
+
+[dlc]: https://github.com/v2fly/domain-list-community
 
 `reject-ip.mrs` / `custom-reject-ip` 仍是独立的 ipcidr 规则集，不参与聚合。
 
@@ -90,7 +96,31 @@ HTTPDNS 域名已从
 两份上游中的 `IP-CIDR`/`IP-CIDR6` 因无法存入 domain MRS，统一放在
 `reject-ip.yaml`。
 
-手动构建需要 `mihomo`、Python 3 和 `curl`：
+## 无法进入 domain MRS 的规则
+
+geosite 源数据里的 `keyword:` 和 `regexp:` 条目在 domain MRS 中没有对应
+表示，下游产物会把它们直接丢掉。本仓库改为把这些条目写进
+`reject-classical.yaml`，需要时按 classical 规则集加载：
+
+```yaml
+rule-providers:
+  reject-classical:
+    type: http
+    behavior: classical
+    format: yaml
+    interval: 86400
+    proxy: 🌐
+    url: https://raw.githubusercontent.com/qwqgong-ui/android-cn-apps/refs/heads/main/reject-classical.yaml
+    path: ruleset/reject-classical.yaml
+
+rules:
+  - RULE-SET,reject-classical,🛑
+```
+
+这份文件由构建脚本生成，不要手工编辑；当前只有 1 条 `DOMAIN-REGEX`，
+不加载也只是少拦一条规则。
+
+手动构建需要 `mihomo`、Python 3、`git` 和 `curl`：
 
 ```shell
 ./scripts/build-reject-all.sh

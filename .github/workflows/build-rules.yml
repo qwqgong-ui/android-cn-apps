@@ -12,6 +12,8 @@ on:
       - scripts/build-reject-all.sh
       - scripts/normalize-domain-rules.py
       - scripts/parse-domain-source.py
+      - scripts/resolve-geosite-list.py
+      - scripts/write-classical-rules.py
       - scripts/domain_rules.py
       - scripts/validate-domain-coverage.py
       - .github/workflows/build-rules.yml
@@ -67,6 +69,7 @@ jobs:
           DEDUP_RATE: ${{ steps.rules.outputs.dedup_rate }}
           PRUNED: ${{ steps.rules.outputs.pruned }}
           FINAL_COUNT: ${{ steps.rules.outputs.final_count }}
+          CLASSICAL: ${{ steps.rules.outputs.classical_count }}
           INPUT_BYTES: ${{ steps.rules.outputs.input_source_bytes }}
           FINAL_BYTES: ${{ steps.rules.outputs.final_bytes }}
           SAVINGS: ${{ steps.rules.outputs.savings_rate }}
@@ -86,6 +89,7 @@ jobs:
             echo "| Exact deduplication rate | $DEDUP_RATE% |"
             echo "| Safely covered rules pruned | $PRUNED |"
             echo "| Final rules | $FINAL_COUNT |"
+            echo "| reject-classical.yaml rules | $CLASSICAL |"
             echo "| Upstream source bytes | $INPUT_BYTES |"
             echo "| reject-all.mrs bytes | $FINAL_BYTES |"
             echo "| Byte savings vs sources | $SAVINGS% |"
@@ -96,7 +100,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           git diff --check
-          git add reject.mrs reject-all.mrs
+          git add reject.mrs reject-all.mrs reject-classical.yaml
           if git diff --cached --quiet; then
             echo 'Rule artifacts are unchanged.'
             exit 0

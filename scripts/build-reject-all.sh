@@ -5,9 +5,11 @@ repo_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 mihomo_bin=${MIHOMO_BIN:-mihomo}
 custom_source=${CUSTOM_REJECT_SOURCE:-"$repo_root/reject.yaml"}
 output=${REJECT_ALL_OUTPUT:-"$repo_root/reject-all.mrs"}
+classical_output=${REJECT_CLASSICAL_OUTPUT:-"$repo_root/reject-classical.yaml"}
+geosite_repo=${GEOSITE_REPO:-https://github.com/v2fly/domain-list-community.git}
 stats_file=${STATS_FILE:-}
 
-for command in curl python3; do
+for command in curl git python3; do
   command -v "$command" >/dev/null || {
     printf 'Required command not found: %s\n' "$command" >&2
     exit 1
@@ -25,29 +27,51 @@ fi
 work_dir=$(mktemp -d)
 trap 'rm -rf -- "$work_dir"' EXIT
 
-# Pull each upstream in its authoritative text form rather than the compiled
-# .mrs each project also publishes. A .mrs is a binary artifact built by a
-# Mihomo version we do not control, so decoding it makes the merged semantics
-# depend on someone else's toolchain; the text is the rule list itself.
+# The two geosite lists come from domain-list-community, the list data
+# MetaCubeX's geo/geosite artifacts are generated from. Reading the data itself
+# keeps the merged semantics tied to the list source instead of to someone
+# else's rendering of it, and surfaces the entries that rendering discards.
+geosite_names=(category-ads-all category-httpdns-cn)
+
+# The remaining upstreams are pulled in their authoritative text form rather
+# than the compiled .mrs each project also publishes. A .mrs is a binary
+# artifact built by a Mihomo version we do not control, so decoding it makes
+# the merged semantics depend on someone else's toolchain.
 declare -A source_urls=(
-  [category-ads-all]='https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ads-all.list'
-  [category-httpdns-cn]='https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-httpdns-cn.list'
   [reject]='https://raw.githubusercontent.com/wwqgtxx/clash-rules/release/reject.list'
   [adblockmihomolite]='https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/adblockmihomolite.yaml'
 )
 declare -A source_formats=(
-  [category-ads-all]=list
-  [category-httpdns-cn]=list
   [reject]=list
   [adblockmihomolite]=yaml
 )
-source_names=(category-ads-all category-httpdns-cn reject adblockmihomolite)
+source_names=(reject adblockmihomolite)
 
 printf 'Mihomo: '
 "$mihomo_bin" -v
 
 input_source_bytes=0
 text_inputs=()
+unsupported_inputs=()
+
+geosite_dir="$work_dir/domain-list-community"
+printf 'Cloning %s\n' "$geosite_repo"
+git clone --depth 1 --quiet "$geosite_repo" "$geosite_dir"
+printf 'domain-list-community %s\n' "$(git -C "$geosite_dir" rev-parse --short HEAD)"
+for name in "${geosite_names[@]}"; do
+  text="$work_dir/$name.txt"
+  unsupported="$work_dir/$name.unsupported"
+  count=$(python3 "$repo_root/scripts/resolve-geosite-list.py" \
+    --data "$geosite_dir/data" --list "$name" \
+    --output "$text" --unsupported "$unsupported")
+  bytes=$(wc -c < "$text")
+  printf '%-24s rules=%8d  bytes=%9d\n' "$name" "$count" "$bytes"
+  printf -v "${name//-/_}_count" '%s' "$count"
+  input_source_bytes=$((input_source_bytes + bytes))
+  text_inputs+=("$text")
+  unsupported_inputs+=("$unsupported")
+done
+
 for name in "${source_names[@]}"; do
   source_file="$work_dir/$name.source"
   text="$work_dir/$name.txt"
@@ -106,6 +130,13 @@ text_inputs+=("$custom_parsed")
 python3 "$repo_root/scripts/validate-domain-coverage.py" \
   --custom "$custom_parsed" --final "$custom_text"
 
+# Nothing upstream ships is silently lost: what a domain MRS cannot hold is
+# published as a classical rule-set beside it.
+classical_candidate="$work_dir/reject-classical.yaml"
+classical_count=$(python3 "$repo_root/scripts/write-classical-rules.py" \
+  "${unsupported_inputs[@]}" --output "$classical_candidate")
+printf '%-24s rules=%8d\n' reject-classical "$classical_count"
+
 normalized="$work_dir/reject-all.txt"
 normalize_stats="$work_dir/normalize.stats"
 python3 "$repo_root/scripts/normalize-domain-rules.py" \
@@ -152,6 +183,7 @@ mkdir -p -- "$(dirname -- "$output")"
 mv -- "$candidate" "$output"
 # Keep the legacy custom-only artifact synchronized with reject.yaml.
 mv -- "$custom_mrs" "$repo_root/reject.mrs"
+mv -- "$classical_candidate" "$classical_output"
 
 printf '\nUnified reject rules statistics\n'
 printf '%-34s %d\n' 'category-ads-all original rules:' "$category_ads_all_count"
@@ -164,6 +196,7 @@ printf '%-34s %d\n' 'exact duplicate rules removed:' "$exact_duplicates"
 printf '%-34s %d (%s%%)\n' 'rules after exact deduplication:' "$exact_unique" "$dedup_rate"
 printf '%-34s %d\n' 'safely covered rules pruned:' "$pruned"
 printf '%-34s %d\n' 'final reject-all.mrs rules:' "$final_count"
+printf '%-34s %d\n' 'reject-classical.yaml rules:' "$classical_count"
 printf '%-34s %d\n' 'upstream source total bytes:' "$input_source_bytes"
 printf '%-34s %d\n' 'reject-all.mrs bytes:' "$final_bytes"
 printf '%-34s %s%%\n' 'byte savings vs sources:' "$savings_rate"
@@ -181,6 +214,7 @@ if [[ -n "$stats_file" ]]; then
     printf 'dedup_rate=%s\n' "$dedup_rate"
     printf 'pruned=%s\n' "$pruned"
     printf 'final_count=%s\n' "$final_count"
+    printf 'classical_count=%s\n' "$classical_count"
     printf 'input_source_bytes=%s\n' "$input_source_bytes"
     printf 'final_bytes=%s\n' "$final_bytes"
     printf 'savings_rate=%s\n' "$savings_rate"
