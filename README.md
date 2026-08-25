@@ -39,14 +39,23 @@ rules:
 
 ## 统一域名拦截规则
 
-仓库每天聚合 4 个外部 domain MRS 和本仓库 `reject.yaml`，经解包、
-小写化、精确去重和保守的后缀包含裁剪后，重新编译为单一 domain MRS：
+仓库每天聚合 4 个外部规则源和本仓库 `reject.yaml`，经解析、
+小写化、精确去重和保守的后缀包含裁剪后，编译为单一 domain MRS：
 
-- MetaCubeX `category-ads-all`
-- MetaCubeX `category-httpdns-cn`
-- wwqgtxx `reject`
-- 217heidai `adblockmihomolite`
+- MetaCubeX `category-ads-all` (`.list`)
+- MetaCubeX `category-httpdns-cn` (`.list`)
+- wwqgtxx `reject` (`.list`)
+- 217heidai `adblockmihomolite` (`.yaml`)
 - 本仓库 `reject.yaml` (`custom-reject`)
+
+四个外部源都拉取上游发布的规则文本，而不是它们同时发布的 `.mrs`。
+`.mrs` 是上游用自己那一版 Mihomo 编译出来的二进制产物，直接解包会把合并
+结果的语义绑定在别人的工具链上；改从文本拉取后，全部规则都由本仓库锁定的
+Mihomo 版本编译。所有规则源（含 `reject.yaml`）还会先经过严格校验：
+`mihomo convert-ruleset domain text` 对任何一行都照单全收，若上游改用
+classical 规则（`DOMAIN-SUFFIX,example.com`）、Geosite 属性
+（`keyword:`、`regexp:`）或 IP 字面量，这些无法匹配的条目会被静默写进
+MRS；现在它们会直接让构建失败。
 
 `reject-ip.mrs` / `custom-reject-ip` 仍是独立的 ipcidr 规则集，不参与聚合。
 
@@ -88,7 +97,7 @@ HTTPDNS 域名已从
 ```
 
 GitHub Actions 每天 UTC 18:00（UTC+8 02:00）运行，也支持手动触发；
-`reject.yaml` 或构建脚本修改时也会构建。工作流会校验 MRS behavior、
+`reject.yaml` 或构建脚本修改时也会构建。工作流会校验规则语法、MRS behavior、
 规则数、往返 dump、IP/CIDR 混入和 custom-reject 覆盖，并且仅在产物变化时提交。
 
 ## 限制

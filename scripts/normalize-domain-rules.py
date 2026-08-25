@@ -4,35 +4,19 @@
 from __future__ import annotations
 
 import argparse
-import ipaddress
 from pathlib import Path
 import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from domain_rules import RuleError, bare_domain, validate  # noqa: E402
 
 
 def normalize(raw: str) -> str | None:
     rule = raw.strip()
     if not rule or rule.startswith("#") or rule.startswith("//"):
         return None
-    return rule.lower()
-
-
-def address_candidate(rule: str) -> str:
-    if rule.startswith("+."):
-        return rule[2:]
-    if rule.startswith("."):
-        return rule[1:]
-    return rule
-
-
-def reject_ip_rule(rule: str) -> None:
-    candidate = address_candidate(rule)
-    if "*" in candidate:
-        return
-    try:
-        ipaddress.ip_network(candidate, strict=False)
-    except ValueError:
-        return
-    raise ValueError(f"IP/CIDR rule is not allowed in a domain ruleset: {rule}")
+    return validate(rule.lower())
 
 
 def suffixes(rules: set[str]) -> set[str]:
@@ -47,7 +31,7 @@ def suffixes(rules: set[str]) -> set[str]:
 
 
 def covered_by_suffix(rule: str, domain_suffixes: set[str]) -> bool:
-    candidate = address_candidate(rule)
+    candidate = bare_domain(rule)
     labels = candidate.split(".")
     for index in range(len(labels)):
         suffix = ".".join(labels[index:])
@@ -68,7 +52,6 @@ def load(paths: list[Path]) -> tuple[int, set[str]]:
                 if rule is None:
                     continue
                 before += 1
-                reject_ip_rule(rule)
                 rules.add(rule)
     return before, rules
 
@@ -87,7 +70,7 @@ def main() -> int:
     )
 
     if not final_rules:
-        raise ValueError("normalization produced an empty domain ruleset")
+        raise RuleError("normalization produced an empty domain ruleset")
 
     args.output.write_text("".join(f"{rule}\n" for rule in final_rules), encoding="utf-8")
     args.stats.write_text(

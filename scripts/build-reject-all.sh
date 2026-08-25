@@ -25,40 +25,48 @@ fi
 work_dir=$(mktemp -d)
 trap 'rm -rf -- "$work_dir"' EXIT
 
+# Pull each upstream in its authoritative text form rather than the compiled
+# .mrs each project also publishes. A .mrs is a binary artifact built by a
+# Mihomo version we do not control, so decoding it makes the merged semantics
+# depend on someone else's toolchain; the text is the rule list itself.
 declare -A source_urls=(
-  [category-ads-all]='https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ads-all.mrs'
-  [category-httpdns-cn]='https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-httpdns-cn.mrs'
-  [reject]='https://raw.githubusercontent.com/wwqgtxx/clash-rules/release/reject.mrs'
-  [adblockmihomolite]='https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/adblockmihomolite.mrs'
+  [category-ads-all]='https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ads-all.list'
+  [category-httpdns-cn]='https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-httpdns-cn.list'
+  [reject]='https://raw.githubusercontent.com/wwqgtxx/clash-rules/release/reject.list'
+  [adblockmihomolite]='https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/adblockmihomolite.yaml'
+)
+declare -A source_formats=(
+  [category-ads-all]=list
+  [category-httpdns-cn]=list
+  [reject]=list
+  [adblockmihomolite]=yaml
 )
 source_names=(category-ads-all category-httpdns-cn reject adblockmihomolite)
 
 printf 'Mihomo: '
 "$mihomo_bin" -v
 
-input_mrs_bytes=0
+input_source_bytes=0
 text_inputs=()
 for name in "${source_names[@]}"; do
-  mrs="$work_dir/$name.mrs"
+  source_file="$work_dir/$name.source"
   text="$work_dir/$name.txt"
   printf 'Downloading %s\n' "$name"
   curl --fail --location --silent --show-error \
     --retry 4 --retry-all-errors --connect-timeout 20 --max-time 180 \
-    "${source_urls[$name]}" --output "$mrs"
-  [[ -s "$mrs" ]] || {
+    "${source_urls[$name]}" --output "$source_file"
+  [[ -s "$source_file" ]] || {
     printf 'Downloaded an empty ruleset: %s\n' "$name" >&2
     exit 1
   }
-  "$mihomo_bin" convert-ruleset domain mrs "$mrs" "$text"
-  count=$(wc -l < "$text")
-  bytes=$(wc -c < "$mrs")
-  (( count > 0 )) || {
-    printf 'Downloaded ruleset has no domain rules: %s\n' "$name" >&2
-    exit 1
-  }
+  # Fails the build when an upstream starts shipping syntax a domain ruleset
+  # cannot express, instead of silently storing it as an unmatchable entry.
+  count=$(python3 "$repo_root/scripts/parse-domain-source.py" \
+    "$source_file" --format "${source_formats[$name]}" --output "$text")
+  bytes=$(wc -c < "$source_file")
   printf '%-24s rules=%8d  bytes=%9d\n' "$name" "$count" "$bytes"
   printf -v "${name//-/_}_count" '%s' "$count"
-  input_mrs_bytes=$((input_mrs_bytes + bytes))
+  input_source_bytes=$((input_source_bytes + bytes))
   text_inputs+=("$text")
 done
 
@@ -80,14 +88,23 @@ if grep --ignore-case --quiet 'invalid domain' "$custom_build_log"; then
 fi
 "$mihomo_bin" convert-ruleset domain mrs "$custom_mrs" "$custom_text"
 custom_reject_count=$(wc -l < "$custom_text")
-custom_mrs_bytes=$(wc -c < "$custom_mrs")
+# reject.yaml goes through the same strict parser as the upstream sources, so
+# the merge input is the file itself rather than whatever the Mihomo CLI kept.
+custom_parsed="$work_dir/custom-reject.parsed.txt"
+python3 "$repo_root/scripts/parse-domain-source.py" \
+  "$custom_source" --format yaml --output "$custom_parsed" >/dev/null
+custom_source_bytes=$(wc -c < "$custom_source")
 (( custom_reject_count > 0 )) || {
   printf 'Custom reject source has no accepted domain rules\n' >&2
   exit 1
 }
-printf '%-24s rules=%8d  bytes=%9d\n' custom-reject "$custom_reject_count" "$custom_mrs_bytes"
-input_mrs_bytes=$((input_mrs_bytes + custom_mrs_bytes))
-text_inputs+=("$custom_text")
+printf '%-24s rules=%8d  bytes=%9d\n' custom-reject "$custom_reject_count" "$custom_source_bytes"
+input_source_bytes=$((input_source_bytes + custom_source_bytes))
+text_inputs+=("$custom_parsed")
+
+# The legacy custom-only artifact must still stand for all of reject.yaml.
+python3 "$repo_root/scripts/validate-domain-coverage.py" \
+  --custom "$custom_parsed" --final "$custom_text"
 
 normalized="$work_dir/reject-all.txt"
 normalize_stats="$work_dir/normalize.stats"
@@ -129,7 +146,7 @@ python3 "$repo_root/scripts/validate-domain-coverage.py" \
 final_bytes=$(wc -c < "$candidate")
 exact_duplicates=$((merged_before - exact_unique))
 dedup_rate=$(python3 -c 'import sys; a,b=map(int,sys.argv[1:]); print(f"{(a-b)*100/a:.2f}")' "$merged_before" "$exact_unique")
-savings_rate=$(python3 -c 'import sys; a,b=map(int,sys.argv[1:]); print(f"{(a-b)*100/a:.2f}")' "$input_mrs_bytes" "$final_bytes")
+savings_rate=$(python3 -c 'import sys; a,b=map(int,sys.argv[1:]); print(f"{(a-b)*100/a:.2f}")' "$input_source_bytes" "$final_bytes")
 
 mkdir -p -- "$(dirname -- "$output")"
 mv -- "$candidate" "$output"
@@ -147,9 +164,9 @@ printf '%-34s %d\n' 'exact duplicate rules removed:' "$exact_duplicates"
 printf '%-34s %d (%s%%)\n' 'rules after exact deduplication:' "$exact_unique" "$dedup_rate"
 printf '%-34s %d\n' 'safely covered rules pruned:' "$pruned"
 printf '%-34s %d\n' 'final reject-all.mrs rules:' "$final_count"
-printf '%-34s %d\n' 'input MRS total bytes:' "$input_mrs_bytes"
+printf '%-34s %d\n' 'upstream source total bytes:' "$input_source_bytes"
 printf '%-34s %d\n' 'reject-all.mrs bytes:' "$final_bytes"
-printf '%-34s %s%%\n' 'MRS byte savings:' "$savings_rate"
+printf '%-34s %s%%\n' 'byte savings vs sources:' "$savings_rate"
 
 if [[ -n "$stats_file" ]]; then
   {
@@ -164,7 +181,7 @@ if [[ -n "$stats_file" ]]; then
     printf 'dedup_rate=%s\n' "$dedup_rate"
     printf 'pruned=%s\n' "$pruned"
     printf 'final_count=%s\n' "$final_count"
-    printf 'input_mrs_bytes=%s\n' "$input_mrs_bytes"
+    printf 'input_source_bytes=%s\n' "$input_source_bytes"
     printf 'final_bytes=%s\n' "$final_bytes"
     printf 'savings_rate=%s\n' "$savings_rate"
   } >> "$stats_file"
