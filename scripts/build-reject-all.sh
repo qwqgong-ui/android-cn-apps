@@ -39,13 +39,18 @@ geosite_names=(category-ads-all category-httpdns-cn)
 # the merged semantics depend on someone else's toolchain.
 declare -A source_urls=(
   [reject]='https://raw.githubusercontent.com/wwqgtxx/clash-rules/release/reject.list'
-  [adblockmihomolite]='https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/adblockmihomolite.yaml'
+  [adblockmihomo]='https://github.com/217heidai/adblockfilters/releases/download/rule/adblockmihomo.yaml'
+)
+# Sources that mix IP literals into their domain list; those are dropped
+# rather than failing the build.
+declare -A source_skip_ip=(
+  [adblockmihomo]=1
 )
 declare -A source_formats=(
   [reject]=list
-  [adblockmihomolite]=yaml
+  [adblockmihomo]=yaml
 )
-source_names=(reject adblockmihomolite)
+source_names=(reject adblockmihomo)
 
 printf 'Mihomo: '
 "$mihomo_bin" -v
@@ -86,7 +91,8 @@ for name in "${source_names[@]}"; do
   # Fails the build when an upstream starts shipping syntax a domain ruleset
   # cannot express, instead of silently storing it as an unmatchable entry.
   count=$(python3 "$repo_root/scripts/parse-domain-source.py" \
-    "$source_file" --format "${source_formats[$name]}" --output "$text")
+    "$source_file" --format "${source_formats[$name]}" --output "$text" \
+    ${source_skip_ip[$name]:+--skip-ip})
   bytes=$(wc -c < "$source_file")
   printf '%-24s rules=%8d  bytes=%9d\n' "$name" "$count" "$bytes"
   printf -v "${name//-/_}_count" '%s' "$count"
@@ -189,7 +195,7 @@ printf '\nUnified reject rules statistics\n'
 printf '%-34s %d\n' 'category-ads-all original rules:' "$category_ads_all_count"
 printf '%-34s %d\n' 'category-httpdns-cn original rules:' "$category_httpdns_cn_count"
 printf '%-34s %d\n' 'reject original rules:' "$reject_count"
-printf '%-34s %d\n' 'adblockmihomolite original rules:' "$adblockmihomolite_count"
+printf '%-34s %d\n' 'adblockmihomo original rules:' "$adblockmihomo_count"
 printf '%-34s %d\n' 'custom-reject accepted rules:' "$custom_reject_count"
 printf '%-34s %d\n' 'merged rules before deduplication:' "$merged_before"
 printf '%-34s %d\n' 'exact duplicate rules removed:' "$exact_duplicates"
@@ -206,7 +212,7 @@ if [[ -n "$stats_file" ]]; then
     printf 'category_ads_all_count=%s\n' "$category_ads_all_count"
     printf 'category_httpdns_cn_count=%s\n' "$category_httpdns_cn_count"
     printf 'reject_count=%s\n' "$reject_count"
-    printf 'adblockmihomolite_count=%s\n' "$adblockmihomolite_count"
+    printf 'adblockmihomo_count=%s\n' "$adblockmihomo_count"
     printf 'custom_reject_count=%s\n' "$custom_reject_count"
     printf 'merged_before=%s\n' "$merged_before"
     printf 'exact_unique=%s\n' "$exact_unique"

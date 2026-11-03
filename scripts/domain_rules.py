@@ -33,6 +33,10 @@ class RuleError(ValueError):
     """A source line that Mihomo's domain behavior cannot represent."""
 
 
+class IPRuleError(RuleError):
+    """An IP or CIDR written as a domain rule, which a domain ruleset never matches."""
+
+
 def strip_payload(line: str, *, yaml: bool) -> str | None:
     """Return the rule text of a source line, or None when it carries none."""
     rule = line.strip()
@@ -72,5 +76,5 @@ def validate(rule: str) -> str:
         except ValueError:
             pass
         else:
-            raise RuleError(f"IP/CIDR rule is not allowed in a domain ruleset: {rule}")
+            raise IPRuleError(f"IP/CIDR rule is not allowed in a domain ruleset: {rule}")
     return rule

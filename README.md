@@ -45,7 +45,7 @@ rules:
 - v2fly domain-list-community `category-ads-all`
 - v2fly domain-list-community `category-httpdns-cn`
 - wwqgtxx `reject` (`.list`)
-- 217heidai `adblockmihomolite` (`.yaml`)
+- 217heidai `adblockmihomo` (`.yaml`)
 - 本仓库 `reject.yaml` (`custom-reject`)
 
 两个 geosite 列表直接解析 [v2fly/domain-list-community][dlc] 的 `data/`

@@ -9,7 +9,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from domain_rules import RuleError, strip_payload, validate  # noqa: E402
+from domain_rules import IPRuleError, RuleError, strip_payload, validate  # noqa: E402
 
 MAX_REPORTED = 20
 
@@ -19,11 +19,17 @@ def main() -> int:
     parser.add_argument("input", type=Path)
     parser.add_argument("--format", required=True, choices=("list", "yaml"))
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument(
+        "--skip-ip",
+        action="store_true",
+        help="drop IP/CIDR entries instead of failing; they never match as domains",
+    )
     args = parser.parse_args()
 
     is_yaml = args.format == "yaml"
     rules: list[str] = []
     problems: list[str] = []
+    skipped_ip = 0
     with args.input.open(encoding="utf-8") as source:
         for number, line in enumerate(source, start=1):
             try:
@@ -31,6 +37,11 @@ def main() -> int:
                 if rule is None:
                     continue
                 rules.append(validate(rule))
+            except IPRuleError as error:
+                if not args.skip_ip:
+                    problems.append(f"  line {number}: {error}")
+                else:
+                    skipped_ip += 1
             except RuleError as error:
                 problems.append(f"  line {number}: {error}")
 
@@ -45,6 +56,8 @@ def main() -> int:
         print(f"error: {args.input.name} has no domain rules", file=sys.stderr)
         return 1
 
+    if skipped_ip:
+        print(f"{args.input.name}: skipped {skipped_ip} IP/CIDR entries", file=sys.stderr)
     args.output.write_text("".join(f"{rule}\n" for rule in rules), encoding="utf-8")
     print(len(rules))
     return 0
