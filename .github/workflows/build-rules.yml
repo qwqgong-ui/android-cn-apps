@@ -9,6 +9,7 @@ on:
       - main
     paths:
       - reject.yaml
+      - umeng-reject.yaml
       - scripts/build-reject-all.sh
       - scripts/normalize-domain-rules.py
       - scripts/parse-domain-source.py
@@ -64,6 +65,7 @@ jobs:
           REJECT: ${{ steps.rules.outputs.reject_count }}
           ADBLOCK: ${{ steps.rules.outputs.adblockmihomolite_count }}
           CUSTOM: ${{ steps.rules.outputs.custom_reject_count }}
+          UMENG: ${{ steps.rules.outputs.umeng_reject_count }}
           BEFORE: ${{ steps.rules.outputs.merged_before }}
           UNIQUE: ${{ steps.rules.outputs.exact_unique }}
           DEDUP_RATE: ${{ steps.rules.outputs.dedup_rate }}
@@ -84,6 +86,7 @@ jobs:
             echo "| wwqgtxx reject rules | $REJECT |"
             echo "| adblockmihomolite rules | $ADBLOCK |"
             echo "| custom-reject accepted rules | $CUSTOM |"
+            echo "| umeng-reject accepted rules | $UMENG |"
             echo "| Rules before deduplication | $BEFORE |"
             echo "| Rules after exact deduplication | $UNIQUE |"
             echo "| Exact deduplication rate | $DEDUP_RATE% |"
