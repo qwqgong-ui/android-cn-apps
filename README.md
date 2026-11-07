@@ -39,7 +39,7 @@ rules:
 
 ## 统一域名拦截规则
 
-仓库每天聚合 4 个外部规则源和本仓库 `reject.yaml`，经解析、
+仓库每天聚合 4 个外部规则源、本仓库 `reject.yaml` 和独立的 `umeng-reject.yaml`，经解析、
 小写化、精确去重和保守的后缀包含裁剪后，编译为单一 domain MRS：
 
 - v2fly domain-list-community `category-ads-all`
@@ -47,6 +47,7 @@ rules:
 - wwqgtxx `reject` (`.list`)
 - 217heidai `adblockmihomo` (`.yaml`)
 - 本仓库 `reject.yaml` (`custom-reject`)
+- 本仓库 `umeng-reject.yaml`（友盟统计与崩溃上报补充规则）
 
 两个 geosite 列表直接解析 [v2fly/domain-list-community][dlc] 的 `data/`
 源数据（按其 `main.go` 的语义还原 `include:`、属性过滤和冗余子域裁剪），
@@ -96,6 +97,37 @@ HTTPDNS 域名已从
 两份上游中的 `IP-CIDR`/`IP-CIDR6` 因无法存入 domain MRS，统一放在
 `reject-ip.yaml`。
 
+## 友盟（Umeng）上报补充规则
+
+`umeng-reject.yaml` 只包含已核实的友盟 SDK 上报主机名（精确域名），
+不使用 `+.umeng.com`、`+.umengcloud.com` 整域拦截，避免影响其他服务。
+官方友盟社区确认的统计、崩溃上报域名：
+`ulogs.umeng.com`、`ulogs.umengcloud.com`、
+`errlog.umeng.com`、`errnewlog.umeng.com`；
+其余补充域名依据公开 SDK 流量与规则样本记录，详见源文件注释。
+
+该文件会在统一规则构建时合并进 `reject-all.mrs`，
+**已加载 `reject-all` 的用户无需再添加单独规则集**。
+如需单独订阅：
+
+```yaml
+rule-providers:
+  umeng-reject:
+    type: http
+    behavior: domain
+    format: yaml
+    interval: 86400
+    url: https://raw.githubusercontent.com/qwqgong-ui/android-cn-apps/main/umeng-reject.yaml
+    path: ruleset/umeng-reject.yaml
+
+rules:
+  - RULE-SET,umeng-reject,🛑
+  - RULE-SET,android-cn-apps,DIRECT
+```
+
+把友盟规则放在 `android-cn-apps` 进程直连规则之前。
+此规则仅按域名匹配，不能拦截直接访问 IP 或应用自行隐藏目的域名的流量。
+
 ## 无法进入 domain MRS 的规则
 
 geosite 源数据里的 `keyword:` 和 `regexp:` 条目在 domain MRS 中没有对应
@@ -127,7 +159,7 @@ rules:
 ```
 
 GitHub Actions 每天 UTC 18:00（UTC+8 02:00）运行，也支持手动触发；
-`reject.yaml` 或构建脚本修改时也会构建。工作流会校验规则语法、MRS behavior、
+`reject.yaml`、`umeng-reject.yaml` 或构建脚本修改时也会构建。工作流会校验规则语法、MRS behavior、
 规则数、往返 dump、IP/CIDR 混入和 custom-reject 覆盖，并且仅在产物变化时提交。
 
 ## 限制
