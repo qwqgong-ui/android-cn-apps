@@ -4,6 +4,7 @@ set -Eeuo pipefail
 repo_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 mihomo_bin=${MIHOMO_BIN:-mihomo}
 custom_source=${CUSTOM_REJECT_SOURCE:-"$repo_root/reject.yaml"}
+umeng_source=${UMENG_REJECT_SOURCE:-"$repo_root/umeng-reject.yaml"}
 output=${REJECT_ALL_OUTPUT:-"$repo_root/reject-all.mrs"}
 classical_output=${REJECT_CLASSICAL_OUTPUT:-"$repo_root/reject-classical.yaml"}
 geosite_repo=${GEOSITE_REPO:-https://github.com/v2fly/domain-list-community.git}
@@ -21,6 +22,10 @@ if [[ ! -x "$mihomo_bin" ]] && ! command -v "$mihomo_bin" >/dev/null 2>&1; then
 fi
 [[ -f "$custom_source" ]] || {
   printf 'Custom reject source not found: %s\n' "$custom_source" >&2
+  exit 1
+}
+[[ -f "$umeng_source" ]] || {
+  printf 'Umeng reject source not found: %s\n' "$umeng_source" >&2
   exit 1
 }
 
@@ -136,6 +141,16 @@ text_inputs+=("$custom_parsed")
 python3 "$repo_root/scripts/validate-domain-coverage.py" \
   --custom "$custom_parsed" --final "$custom_text"
 
+# Dedicated Umeng telemetry supplement: independent domain YAML for direct
+# subscription, also merged into reject-all.mrs for existing subscribers.
+umeng_parsed="$work_dir/umeng-reject.txt"
+umeng_reject_count=$(python3 "$repo_root/scripts/parse-domain-source.py" \
+  "$umeng_source" --format yaml --output "$umeng_parsed")
+umeng_source_bytes=$(wc -c < "$umeng_source")
+printf '%-24s rules=%8d  bytes=%9d\n' umeng-reject "$umeng_reject_count" "$umeng_source_bytes"
+input_source_bytes=$((input_source_bytes + umeng_source_bytes))
+text_inputs+=("$umeng_parsed")
+
 # Nothing upstream ships is silently lost: what a domain MRS cannot hold is
 # published as a classical rule-set beside it.
 classical_candidate="$work_dir/reject-classical.yaml"
@@ -197,6 +212,7 @@ printf '%-34s %d\n' 'category-httpdns-cn original rules:' "$category_httpdns_cn_
 printf '%-34s %d\n' 'reject original rules:' "$reject_count"
 printf '%-34s %d\n' 'adblockmihomo original rules:' "$adblockmihomo_count"
 printf '%-34s %d\n' 'custom-reject accepted rules:' "$custom_reject_count"
+printf '%-34s %d\n' 'umeng-reject accepted rules:' "$umeng_reject_count"
 printf '%-34s %d\n' 'merged rules before deduplication:' "$merged_before"
 printf '%-34s %d\n' 'exact duplicate rules removed:' "$exact_duplicates"
 printf '%-34s %d (%s%%)\n' 'rules after exact deduplication:' "$exact_unique" "$dedup_rate"
@@ -214,6 +230,7 @@ if [[ -n "$stats_file" ]]; then
     printf 'reject_count=%s\n' "$reject_count"
     printf 'adblockmihomo_count=%s\n' "$adblockmihomo_count"
     printf 'custom_reject_count=%s\n' "$custom_reject_count"
+    printf 'umeng_reject_count=%s\n' "$umeng_reject_count"
     printf 'merged_before=%s\n' "$merged_before"
     printf 'exact_unique=%s\n' "$exact_unique"
     printf 'exact_duplicates=%s\n' "$exact_duplicates"
